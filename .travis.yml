@@ -4,4 +4,4 @@ install:
   - pip install scikit-image
   
 script:
-  - python tests.py Circle.jpg
+  - python main.py Circle.jpg
