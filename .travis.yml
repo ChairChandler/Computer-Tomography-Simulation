@@ -2,3 +2,6 @@ language: python
 install:
   - pip3 install numpy
   - pip install scikit-image
+  
+script:
+  - python tests.py Circle.jpg
