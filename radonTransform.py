@@ -1,64 +1,89 @@
-from skimage.transform import radon, iradon
-from math import sqrt
-from skimage import draw
+from math import sqrt, sin, cos, pi, asin, radians as degree2radians
+from skimage.transform import iradon, radon as testRadon
+from skimage.draw import line
 import numpy as np
-from scipy.ndimage import rotate
 
 
-def radonTransform(img, *, alfa, detectors_number, far_detectors_distance):
+class Radiation:
+    def __init__(self, img):
+        self.img = img
+
+    def calculate(self, emiter: "(x, y)", detectors: "[(x, y) ...]"):
+        detectors_received_brightness = []
+        for x, y in detectors:
+            pixels = zip(*line(emiter[0], emiter[1], x, y))
+
+            pixels_brightness = 0
+            for pix_x, pix_y in pixels:
+                if 0 <= pix_x < self.img.shape[0] and 0 <= pix_y < self.img.shape[1]:
+                    pixels_brightness += self.img[pix_x, pix_y]
+
+            detectors_received_brightness.append(pixels_brightness)
+        return detectors_received_brightness
+
+
+class Round:
+    def __init__(self, center: "(x, y)", radius, detectors_number, far_detectors_distance, theta):
+        self.center = center
+        self.radius = radius
+        self.theta = theta
+        self.angle = 0
+
+        self.detectors_number = detectors_number
+        self.far_detectors_distance = far_detectors_distance
+
+        self.emiter = self.calculateEmiterPosition()
+        self.detectors = self.calculateDetectorsPositions()
+
+    def calculateEmiterPosition(self):
+        x = self.center[0] + self.radius * cos(self.theta + self.angle)
+        y = self.center[1] - self.radius * sin(self.theta + self.angle)
+        return int(x), int(y)
+
+    def calculateDetectorsPositions(self):
+        positions = []
+        n = self.detectors_number
+        fi = 2 * asin(self.far_detectors_distance / (2 * self.radius))
+        for i in range(n):
+            x = self.center[0] + self.radius * cos(self.theta + self.angle + pi - fi / 2 + i * fi / (n - 1))
+            y = self.center[1] - self.radius * sin(self.theta + self.angle + pi - fi / 2 + i * fi / (n - 1))
+            positions.append((int(x), int(y)))
+        return positions
+
+    def rotate(self, angle):
+        self.angle += angle
+
+        if self.angle > 2 * pi:
+            self.angle -= 2 * pi
+
+        self.emiter = self.calculateEmiterPosition()
+        self.detectors = self.calculateDetectorsPositions()
+
+
+def radonTransform(img, *, rotate_angle, theta, detectors_number, far_detectors_distance, iterations):
     """
         img: Image to simulate radon transform
-        alfa: Emiters and detectors angle for next iteration in degree
+        rotate_angle: Emiters and detectors angle for next iteration in degree
         detectors_number: Amount of detectors
         far_detectors_distance: Distance in pixels between farthest detectors
     """
-    unit_distance = far_detectors_distance/detectors_number
-    diameter = sqrt(img.shape[0]**2 + img.shape[1]**2)
-    point = {
-        'x': diameter/2,
-        'y': diameter/2
-    }
 
-    rr, cc = draw.circle(point['x'], point['y'], diameter/2)
-    img_circle = np.ndarray(shape=(int(diameter) + 1,) * 2)
+    diameter = sqrt(img.shape[0] ** 2 + img.shape[1] ** 2)
+    angle_radians = degree2radians(rotate_angle)
 
-    # create y list for every x
-    points = {}
-    for x, y in zip(rr, cc):
-        if x in points:
-            points[x].append(y)
-        else:
-            points[x] = []
+    rad = Radiation(img)
+    sinogram = np.ndarray(shape=(iterations, detectors_number))
+    circle = Round((img.shape[0] / 2, img.shape[1] / 2), diameter / 2, detectors_number, far_detectors_distance, theta)
 
-    # find points alongs to the circumference
-    circumference_points = {'x': [], 'y': []}
-    for x, coords_y in points.items():
-        for index_y, y in enumerate(coords_y):
+    for i in range(iterations):
+        sinogram[i] = rad.calculate(circle.emiter, circle.detectors)
+        circle.rotate(angle_radians)
+        print(i)
 
-            # if edge of the image
-            if index_y - 1 < 0 or index_y + 1 == len(points[x]):
-                circumference_points['x'].append(x)
-                circumference_points['y'].append(y)
-            else:
-                req = [
-                    coords_y[index_y - 1] == y - 1,  # (x, y - 1) in circle
-                    coords_y[index_y + 1] == y + 1,  # (x, y + 1) in circle
-                    x - 1 in points,  # (x - 1, y) in circle
-                    x + 1 in points  # (x + 1, y) in circle
-                ]
+    return np.rot90(sinogram.T, 2)
 
-                # if not inside circle
-                if not any(req):
-                    circumference_points['x'].append(x)
-                    circumference_points['y'].append(y)
-
-    img_circle[:, :] = 0
-    img_circle[circumference_points['x'], circumference_points['y']] = 1
-
-    #img_circle = rotate(img_circle, 30, reshape=False)
-
-    return radon(img_circle, theta=None, circle=True)
+    #return testRadon(img, None, circle=True)
 
 
 def reverseRadonTransform(sinogram):
-    return iradon(sinogram, circle=True)
+    return iradon(sinogram, circle=False)

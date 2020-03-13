@@ -13,9 +13,13 @@ def showPlots(plots: []):
     plt.show()
 
 
-def main(file='Kolo.jpg'):
+def main(file):
     img = io.imread(file, as_gray=True)
-    sinogram = radonTransform(img, alfa=30, detectors_number=4, far_detectors_distance=40)
+    sinogram = radonTransform(img,
+                              rotate_angle=1, theta=0,
+                              detectors_number=100,
+                              far_detectors_distance=100,
+                              iterations=360)
     rev_img = reverseRadonTransform(sinogram)
 
     showPlots([img, sinogram, rev_img])
