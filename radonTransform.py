@@ -116,20 +116,39 @@ class InteractiveCT(CT):
         self.interactive_sinogram = False
         self.interval = None
 
+        self.cmap = None
+        self.fig = None
+        self.img_plot = None
+        self.sinogram_plot = None
+
     def interactive(self, *, img, sinogram, interval=1):
         self.animation = img or sinogram
         self.interactive_img = img
         self.interactive_sinogram = sinogram
         self.interval = interval
 
+        if self.interactive_img and self.interactive_sinogram:
+            self.fig, (self.img_plot, self.sinogram_plot) = plt.subplots(1, 2)
+        elif self.interactive_img:
+            self.fig, self.img_plot = plt.subplots(1, 1)
+        elif self.interactive_sinogram:
+            self.fig, self.sinogram_plot = plt.subplots(1, 1)
+
+        if self.fig:
+            self.fig.canvas.set_window_title('CT')
+
+    def setCmap(self, value):
+        self.cmap = value
+
     def run(self):
         if self.animation:
             plt.ion()
-            plt.show()
+            self.fig.show()
 
         data = super().run()
 
         if self.animation:
+            plt.close(self.fig)
             plt.ioff()
 
         return data
@@ -154,7 +173,7 @@ class InteractiveCT(CT):
                 if 0 <= pix_x < img_radon.shape[0] and 0 <= pix_y < img_radon.shape[1]:
                     img_radon[pix_x, pix_y] = 1
 
-        plt.imshow(img_radon)
+        self.img_plot.imshow(img_radon, cmap=self.cmap)
 
     def drawSinogram(self, sinogram):
-        plt.imshow(super().rotateSinogram(sinogram))
+        self.sinogram_plot.imshow(super().rotateSinogram(sinogram), cmap=self.cmap)

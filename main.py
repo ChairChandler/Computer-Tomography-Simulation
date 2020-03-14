@@ -15,8 +15,8 @@ def showPlots(plots: []):
 
 def main(file):
     img = io.imread(file, as_gray=True)
-    ct = InteractiveCT(img, rotate_angle=15, theta=0, detectors_number=50, far_detectors_distance=300, iterations=180)
-    ct.interactive(img=True, sinogram=True)
+    ct = InteractiveCT(img, rotate_angle=5, theta=0, detectors_number=100, far_detectors_distance=300, iterations=36)
+    ct.interactive(img=True, sinogram=True, interval=0.0001)
     sinogram, ct_img = ct.run()
 
     showPlots([img, sinogram, ct_img])
