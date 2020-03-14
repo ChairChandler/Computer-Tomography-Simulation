@@ -15,14 +15,11 @@ def showPlots(plots: []):
 
 def main(file):
     img = io.imread(file, as_gray=True)
-    sinogram = radonTransform(img,
-                              rotate_angle=1, theta=0,
-                              detectors_number=100,
-                              far_detectors_distance=100,
-                              iterations=360)
-    rev_img = reverseRadonTransform(sinogram)
+    ct = InteractiveCT(img, rotate_angle=15, theta=0, detectors_number=50, far_detectors_distance=300, iterations=180)
+    ct.interactive(img=True, sinogram=True)
+    sinogram, ct_img = ct.run()
 
-    showPlots([img, sinogram, rev_img])
+    showPlots([img, sinogram, ct_img])
 
 
 if __name__ == '__main__':

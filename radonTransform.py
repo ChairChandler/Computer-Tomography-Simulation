@@ -1,7 +1,8 @@
 from math import sqrt, sin, cos, pi, asin, radians as degree2radians
-from skimage.transform import iradon, radon as testRadon
+from skimage.transform import iradon as skiradon
 from skimage.draw import line
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 class Radiation:
@@ -11,14 +12,15 @@ class Radiation:
     def calculate(self, emiter: "(x, y)", detectors: "[(x, y) ...]"):
         detectors_received_brightness = []
         for x, y in detectors:
-            pixels = zip(*line(emiter[0], emiter[1], x, y))
+            pixels = zip(*line(emiter[1], emiter[0], y, x))
 
             pixels_brightness = 0
+            amount = 0
             for pix_x, pix_y in pixels:
                 if 0 <= pix_x < self.img.shape[0] and 0 <= pix_y < self.img.shape[1]:
+                    amount += 1
                     pixels_brightness += self.img[pix_x, pix_y]
-
-            detectors_received_brightness.append(pixels_brightness)
+            detectors_received_brightness.append(pixels_brightness / amount)
         return detectors_received_brightness
 
 
@@ -60,30 +62,99 @@ class Round:
         self.detectors = self.calculateDetectorsPositions()
 
 
-def radonTransform(img, *, rotate_angle, theta, detectors_number, far_detectors_distance, iterations):
-    """
-        img: Image to simulate radon transform
-        rotate_angle: Emiters and detectors angle for next iteration in degree
-        detectors_number: Amount of detectors
-        far_detectors_distance: Distance in pixels between farthest detectors
-    """
+class CT:
+    def __init__(self, img, rotate_angle, theta, detectors_number, far_detectors_distance, iterations):
+        """
+                img: Image to simulate radon transform
+                rotate_angle: Emiters and detectors angle for next iteration in degree
+                detectors_number: Amount of detectors
+                far_detectors_distance: Distance in pixels between farthest detectors
+        """
+        self.img = img
+        self.rotate_angle = degree2radians(rotate_angle)
+        self.theta = theta
+        self.detectors_number = detectors_number
+        self.far_detectors_distance = far_detectors_distance
+        self.iterations = iterations
 
-    diameter = sqrt(img.shape[0] ** 2 + img.shape[1] ** 2)
-    angle_radians = degree2radians(rotate_angle)
+    def run(self):
+        sinogram = self.radon()
+        img = self.iradon(sinogram)
+        return sinogram, img
 
-    rad = Radiation(img)
-    sinogram = np.ndarray(shape=(iterations, detectors_number))
-    circle = Round((img.shape[0] / 2, img.shape[1] / 2), diameter / 2, detectors_number, far_detectors_distance, theta)
+    @staticmethod
+    def rotateSinogram(sinogram):
+        return np.rot90(sinogram.T, 2)[:, ::-1]
 
-    for i in range(iterations):
-        sinogram[i] = rad.calculate(circle.emiter, circle.detectors)
-        circle.rotate(angle_radians)
-        print(i)
+    def animate(self, *args, **kwargs):
+        pass
 
-    return np.rot90(sinogram.T, 2)
+    def radon(self):
+        diameter = sqrt(self.img.shape[0] ** 2 + self.img.shape[1] ** 2)
+        circle = Round((self.img.shape[0] / 2, self.img.shape[1] / 2), diameter / 2, self.detectors_number,
+                       self.far_detectors_distance, degree2radians(self.theta))
 
-    #return testRadon(img, None, circle=True)
+        sinogram = np.zeros(shape=(self.iterations, self.detectors_number))
+        rad = Radiation(self.img)
+
+        for i in range(self.iterations):
+            self.animate(circle, sinogram)
+            sinogram[i] = rad.calculate(circle.emiter, circle.detectors)
+            circle.rotate(self.rotate_angle)
+
+        return self.rotateSinogram(sinogram)
+
+    def iradon(self, sinogram):
+        return skiradon(sinogram, circle=False)
 
 
-def reverseRadonTransform(sinogram):
-    return iradon(sinogram, circle=False)
+class InteractiveCT(CT):
+    def __init__(self, img, rotate_angle, theta, detectors_number, far_detectors_distance, iterations):
+        super().__init__(img, rotate_angle, theta, detectors_number, far_detectors_distance, iterations)
+        self.animation = False
+        self.interactive_img = False
+        self.interactive_sinogram = False
+        self.interval = None
+
+    def interactive(self, *, img, sinogram, interval=1):
+        self.animation = img or sinogram
+        self.interactive_img = img
+        self.interactive_sinogram = sinogram
+        self.interval = interval
+
+    def run(self):
+        if self.animation:
+            plt.ion()
+            plt.show()
+
+        data = super().run()
+
+        if self.animation:
+            plt.ioff()
+
+        return data
+
+    def animate(self, circle, sinogram):
+        if self.animation:
+            if self.interactive_img:
+                self.drawImg(circle)
+
+            if self.interactive_sinogram:
+                self.drawSinogram(sinogram)
+
+            plt.pause(self.interval)
+
+    def drawImg(self, circle):
+        img_radon = np.array(self.img, copy=True)
+
+        for x, y in circle.detectors:
+            pixels = zip(*line(circle.emiter[1], circle.emiter[0], y, x))
+
+            for pix_x, pix_y in pixels:
+                if 0 <= pix_x < img_radon.shape[0] and 0 <= pix_y < img_radon.shape[1]:
+                    img_radon[pix_x, pix_y] = 1
+
+        plt.imshow(img_radon)
+
+    def drawSinogram(self, sinogram):
+        plt.imshow(super().rotateSinogram(sinogram))
