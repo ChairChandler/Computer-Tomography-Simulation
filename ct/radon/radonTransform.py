@@ -16,11 +16,10 @@ def radonTransform(img, rotate_angle, theta, detectors_number, far_detectors_dis
     radian_rotate_angle = degree2radians(rotate_angle)
     sinogram = np.zeros(shape=(180, detectors_number))
 
-    i = None
+    i = None  # js var
     for i in range(0, 180, rotate_angle):
         animate_func(circle, sinogram)
         sinogram[i] = calculate_radiation(img, circle.emiter, circle.detectors)
-        # TODO: dodac polownicze usrednianie bo sa dziury
 
         if i - rotate_angle >= 0:  # averaging the nearest non-free data segments
             for j in range(i - rotate_angle + 1, i):
