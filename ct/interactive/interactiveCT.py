@@ -80,10 +80,10 @@ class InteractiveCT(CT):
                 if 0 <= pix_x < img_radon.shape[0] and 0 <= pix_y < img_radon.shape[1]:
                     img_radon[pix_x, pix_y] = 1
 
-        self.img_plot.imshow(img_radon, cmap=self.cmap, interpolation='bessel')
+        self.img_plot.imshow(img_radon, cmap=self.cmap)
 
     def drawSinogram(self, sinogram):
-        self.sinogram_plot.imshow(self.rotateSinogram(sinogram), cmap=self.cmap, interpolation='bessel')
+        self.sinogram_plot.imshow(self.rotateSinogram(sinogram), cmap=self.cmap)
 
     @staticmethod
     def rotateSinogram(sinogram):

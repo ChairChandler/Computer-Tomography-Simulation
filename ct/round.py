@@ -1,4 +1,4 @@
-from math import sin, cos, pi, asin
+import numpy as np
 
 
 class Round:
@@ -14,34 +14,37 @@ class Round:
         self.detectors_number = detectors_number
         self.far_detectors_distance = far_detectors_distance
 
-        self.emiter = self.calculateEmiterPosition()
-        self.detectors = self.calculateDetectorsPositions()
+        self.emiter = None
+        self.detectors = [0 for i in range(detectors_number)]
+
+        self.fi = 2 * np.arcsin(self.far_detectors_distance / (2 * self.radius))
+        if np.isnan(self.fi):
+            raise ArithmeticError("Distance between fartest detectors too much.")
+
+        # for performance reason it is done once
+        self.angle_step_detectors = [self.theta + np.pi - self.fi / 2 + i * self.fi / (self.detectors_number - 1)
+                                     for i in range(detectors_number)]
+
+        self.calculateEmiterPosition()
+        self.calculateDetectorsPositions()
 
     def calculateEmiterPosition(self):
         angle = self.theta + self.angle
-        x = self.center[0] + self.radius * cos(angle)
-        y = self.center[1] - self.radius * sin(angle)
-        return round(x), round(y)
+        x = self.center[0] + self.radius * np.cos(angle)
+        y = self.center[1] - self.radius * np.sin(angle)
+        self.emiter = int(np.round(x)), int(np.round(y))
 
     def calculateDetectorsPositions(self):
-        positions = []
-        n = self.detectors_number
-        fi = 2 * asin(self.far_detectors_distance / (2 * self.radius))
-        for i in range(n):
-            angle = self.theta + self.angle + pi - fi / 2 + i * fi / (n - 1)
-            x = self.center[0] + self.radius * cos(angle)
-            y = self.center[1] - self.radius * sin(angle)
-            positions.append((round(x), round(y)))
-        return positions
+        for i in range(self.detectors_number):
+            angle = self.angle + self.angle_step_detectors[i]
+            x = self.center[0] + self.radius * np.cos(angle)
+            y = self.center[1] - self.radius * np.sin(angle)
+            self.detectors[i] = (int(np.round(x)), int(np.round(y)))
 
     def rotate(self, angle):
         """
             Rotate round by angle.
         """
         self.angle += angle
-
-        if self.angle > 2 * pi:
-            self.angle -= 2 * pi
-
-        self.emiter = self.calculateEmiterPosition()
-        self.detectors = self.calculateDetectorsPositions()
+        self.calculateEmiterPosition()
+        self.calculateDetectorsPositions()

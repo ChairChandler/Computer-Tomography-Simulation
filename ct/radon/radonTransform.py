@@ -1,5 +1,4 @@
-from ct.radon.radiation import calculate_radiation
-from math import sqrt, radians as degree2radians
+from ct.radon.radiation import Radiation
 from ct.round import Round
 import numpy as np
 
@@ -9,26 +8,25 @@ def rotateSinogram(sinogram):
 
 
 def radonTransform(img, rotate_angle, theta, detectors_number, far_detectors_distance, animate_func=None):
-    diameter = sqrt(img.shape[0] ** 2 + img.shape[1] ** 2)
+    diameter = np.sqrt(img.shape[0] ** 2 + img.shape[1] ** 2)
     circle = Round((img.shape[0] / 2, img.shape[1] / 2), diameter / 2, detectors_number,
-                   far_detectors_distance, degree2radians(theta))
+                   far_detectors_distance, np.deg2rad(theta))
 
-    radian_rotate_angle = degree2radians(rotate_angle)
-    sinogram = np.zeros(shape=(180, detectors_number))
+    radian_rotate_angle = np.deg2rad(rotate_angle)
+    sinogram = np.zeros(shape=(360 // rotate_angle, detectors_number))
+
+    rad = Radiation(img, detectors_number)
 
     i = None  # js var
-    for i in range(0, 180, rotate_angle):
+    for i in range(0, 360 // rotate_angle):
         animate_func(circle, sinogram)
-        sinogram[i] = calculate_radiation(img, circle.emiter, circle.detectors)
+        sinogram[i] = rad.calculate(circle.emiter, circle.detectors)
 
-        if i - rotate_angle >= 0:  # averaging the nearest non-free data segments
-            for j in range(i - rotate_angle + 1, i):
-                sinogram[j] = (sinogram[i - rotate_angle] + sinogram[i]) / 2
+        # if i - rotate_angle >= 0:  # averaging the nearest non-free data segments
+        # sinogram[np.arange(i - rotate_angle + 1, i)] = (sinogram[i - rotate_angle] + sinogram[i]) / 2
 
         circle.rotate(radian_rotate_angle)
 
-    if i >= 0:  # averaging the nearest non-free data segments
-        for j in range(i + 1, 180):
-            sinogram[j] = sinogram[i]
+    # sinogram[np.arange(i + 1, 180)] = sinogram[i]  # averaging the nearest non-free data segments
 
     return rotateSinogram(sinogram)

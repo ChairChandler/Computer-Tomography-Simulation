@@ -1,6 +1,6 @@
-from math import radians as degree2radians
 from ct.radon.radonTransform import radonTransform
 from ct.iradon.iradonTransform import iradonTransform
+from abc import abstractmethod
 
 
 class CT:
@@ -17,7 +17,6 @@ class CT:
         else:
             self.img = img
             self.rotate_angle = rotate_angle
-            self.radian_rotate_angle = degree2radians(rotate_angle)
             self.theta = theta
             self.detectors_number = detectors_number
             self.far_detectors_distance = far_detectors_distance
@@ -29,6 +28,7 @@ class CT:
 
         return sinogram, img
 
+    @abstractmethod
     def animate(self, *args, **kwargs):
         """
             Method to be overridden by derived class.

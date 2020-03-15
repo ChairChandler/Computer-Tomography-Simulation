@@ -5,17 +5,16 @@ from sys import argv
 
 
 def showPlots(plots: []):
-    _, subplots = plt.subplots(1, 3)
+    _, subplots = plt.subplots(1, len(plots))
 
-    plt.set_cmap('gray')
     for plot, data in zip(subplots, plots):
-        plot.imshow(data, interpolation='bessel')
+        plot.imshow(data)
     plt.show()
 
 
 def main(file):
     img = io.imread(file, as_gray=True)
-    ct = CT(img, rotate_angle=10, theta=0, detectors_number=100, far_detectors_distance=1000)
+    ct = CT(img, rotate_angle=10, theta=0, detectors_number=200, far_detectors_distance=712)
     ct.interactive(img=True, sinogram=True, interval=0.0001)  # set drawing image and sinogram every iteration
     ct.setCmap('gray')
     sinogram, ct_img = ct.run()
