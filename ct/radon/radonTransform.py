@@ -3,10 +3,6 @@ from ct.round import Round
 import numpy as np
 
 
-def rotateSinogram(sinogram):
-    return np.rot90(sinogram.T, 2)[:, ::-1]
-
-
 def radonTransform(img, rotate_angle, theta, detectors_number, far_detectors_distance, animate_func=None):
     diameter = np.sqrt(img.shape[0] ** 2 + img.shape[1] ** 2)
     circle = Round((img.shape[0] / 2, img.shape[1] / 2), diameter / 2, detectors_number,
@@ -29,4 +25,4 @@ def radonTransform(img, rotate_angle, theta, detectors_number, far_detectors_dis
 
     # sinogram[np.arange(i + 1, 180)] = sinogram[i]  # averaging the nearest non-free data segments
 
-    return rotateSinogram(sinogram)
+    return sinogram

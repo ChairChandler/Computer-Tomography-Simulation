@@ -17,9 +17,11 @@ class Round:
         self.emiter = None
         self.detectors = [0 for i in range(detectors_number)]
 
-        self.fi = 2 * np.arcsin(self.far_detectors_distance / (2 * self.radius))
-        if np.isnan(self.fi):
-            raise ArithmeticError("Distance between fartest detectors too much.")
+        if self.far_detectors_distance > 2 * radius:
+            raise ArithmeticError(f"Distance between fartest detectors have to be less or equal to {int(2 * radius)}.")
+        else:
+            self.fi = 2 * np.arcsin(self.far_detectors_distance / (2 * self.radius))
+
 
         # for performance reason it is done once
         self.angle_step_detectors = [self.theta + np.pi - self.fi / 2 + i * self.fi / (self.detectors_number - 1)

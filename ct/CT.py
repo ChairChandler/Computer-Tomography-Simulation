@@ -15,18 +15,36 @@ class CT:
         if rotate_angle <= 0 or rotate_angle >= 180:
             raise ArithmeticError("Rotate angle have to be in range (0, 180).")
         else:
+            self.print = False
             self.img = img
             self.rotate_angle = rotate_angle
             self.theta = theta
             self.detectors_number = detectors_number
             self.far_detectors_distance = far_detectors_distance
 
+    def setPrint(self, value):
+        self.print = value
+
     def run(self):
+        if self.print:
+            print('Radon transform starting.')
+
         sinogram = radonTransform(self.img, self.rotate_angle, self.theta,
                                   self.detectors_number, self.far_detectors_distance, self.animate)
-        img = iradonTransform(self.img.shape, sinogram, self.theta, self.far_detectors_distance)
 
-        return sinogram, img
+        if self.print:
+            print('Radon transform ended, inverse radon transform starting.')
+
+        img = iradonTransform(self.img.shape, sinogram, self.rotate_angle, self.theta, self.far_detectors_distance)
+
+        if self.print:
+            print('Inverse radon transform ended.')
+
+        return self.rotateSinogram(sinogram), img
+
+    @staticmethod
+    def rotateSinogram(sinogram):
+        return sinogram.T[:, ::-1]
 
     @abstractmethod
     def animate(self, *args, **kwargs):

@@ -83,8 +83,4 @@ class InteractiveCT(CT):
         self.img_plot.imshow(img_radon, cmap=self.cmap)
 
     def drawSinogram(self, sinogram):
-        self.sinogram_plot.imshow(self.rotateSinogram(sinogram), cmap=self.cmap)
-
-    @staticmethod
-    def rotateSinogram(sinogram):
-        return np.rot90(sinogram.T, 2)[:, ::-1]
+        self.sinogram_plot.imshow(super().rotateSinogram(sinogram), cmap=self.cmap)

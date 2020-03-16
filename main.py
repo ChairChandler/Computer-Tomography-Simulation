@@ -14,8 +14,10 @@ def showPlots(plots: []):
 
 def main(file):
     img = io.imread(file, as_gray=True)
-    ct = CT(img, rotate_angle=10, theta=0, detectors_number=200, far_detectors_distance=712)
-    ct.interactive(img=True, sinogram=True, interval=0.0001)  # set drawing image and sinogram every iteration
+
+    ct = CT(img, rotate_angle=2, theta=0, detectors_number=500, far_detectors_distance=1449)
+    ct.setPrint(True)
+    #ct.interactive(img=True, sinogram=True, interval=0.0001)  # set drawing image and sinogram every iteration
     ct.setCmap('gray')
     sinogram, ct_img = ct.run()
 
