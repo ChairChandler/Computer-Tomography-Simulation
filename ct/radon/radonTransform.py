@@ -13,16 +13,9 @@ def radonTransform(img, rotate_angle, theta, detectors_number, far_detectors_dis
 
     rad = Radiation(img, detectors_number)
 
-    i = None  # js var
-    for i in range(0, 360 // rotate_angle):
+    for i in range(360 // rotate_angle):
         animate_func(circle, sinogram)
         sinogram[i] = rad.calculate(circle.emiter, circle.detectors)
-
-        # if i - rotate_angle >= 0:  # averaging the nearest non-free data segments
-        # sinogram[np.arange(i - rotate_angle + 1, i)] = (sinogram[i - rotate_angle] + sinogram[i]) / 2
-
         circle.rotate(radian_rotate_angle)
-
-    # sinogram[np.arange(i + 1, 180)] = sinogram[i]  # averaging the nearest non-free data segments
 
     return sinogram

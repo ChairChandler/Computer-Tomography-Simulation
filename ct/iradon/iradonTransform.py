@@ -9,7 +9,7 @@ def iradonTransform(shape, sinogram, rotate_angle, theta, far_detectors_distance
                    far_detectors_distance, np.deg2rad(theta))
 
     img = np.zeros(shape)
-    irad = LineRadiation(img, calcType="sum")
+    irad = LineRadiation(img, calcType="mean")
     radian_rotate_angle = np.deg2rad(rotate_angle)
     for angle in range(sinogram.shape[0]):
         irad.next(sinogram[angle], circle.emiter, circle.detectors)
