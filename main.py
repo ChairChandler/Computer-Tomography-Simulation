@@ -1,11 +1,11 @@
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backend_bases import RendererBase
-from matplotlib.figure import Figure
+from ct.interactive.interactiveCT import InteractiveCT, CT as FastCT
+from PySide2.QtCore import SIGNAL, QObject, Qt
 from PySide2.QtWidgets import *
-from PySide2.QtCore import SIGNAL, QObject
-from ct.interactive.interactiveCT import InteractiveCT as CT
-from os import path
+from threading import Thread
 from skimage import io
+from math import sqrt
+from os import path
+from conversion import *
 
 
 class Window(QWidget):
@@ -15,47 +15,48 @@ class Window(QWidget):
 
         self.inputs = {
             "img": None,
-            "animate_img": False,
-            "animate_sinogram": False,
-            "rotate_angle": 0,
+            "sinogram": None,
+            "result": None,
+            "fast_mode": False,
+            "rotate_angle": 1,
             "theta_angle": 0,
-            "detectors_number": 0,
-            "detectors_distance": 0,
-            "animation_interval": 0.001
+            "detectors_number": 2,
+            "detectors_distance": 1,
         }
-
-        self.ct = CT(self.inputs["img"], self.inputs["rotate_angle"], self.inputs["theta_angle"],
-                     self.inputs["detectors_number"], self.inputs["detectors_distance"])
-
-        self.iradon_fig = Figure()
 
         # First layout level
         self.plots_layout = {
             "object": QGridLayout(),
             "items": {
                 "img_fig": {
-                    "object": FigureCanvas(self.ct.img_fig),
+                    "object": QLabel(self),
                     "position": (1, 1)
                 },
                 "radon_fig": {
-                    "object": FigureCanvas(self.ct.sinogram_fig),
+                    "object": QLabel(self),
                     "position": (1, 2)
                 },
                 "iradon_fig": {
-                    "object": FigureCanvas(self.iradon_fig),
-                    "position": (1, 3)
+                    "object": QLabel(self),
+                    "position": (1, 3),
                 },
-                "animate_img": {
-                    "object": QCheckBox("Animate Image"),
+                "animation_img": {
+                    "object": QSlider(Qt.Horizontal),
                     "position": (2, 1),
-                    "signal": "stateChanged(int)",
-                    "slot": lambda x:   self.setInputValue("animate_img", False if not x else True)  # on the linux for Qt 2 means True
+                    "signal": "valueChanged(int)",
+                    "slot": lambda x: self.setInputValue("animation_img", False if not x else True)
                 },
-                "animate_sin": {
-                    "object": QCheckBox("Animate Sinogram"),
+                "animation_sinogram": {
+                    "object": QSlider(Qt.Horizontal),
                     "position": (2, 2),
+                    "signal": "valueChanged(int)",
+                    "slot": lambda x: self.setInputValue("animation_sinogram", False if not x else True)
+                },
+                "fast_mode": {
+                    "object": QCheckBox("Fast mode"),
+                    "position": (2, 3),
                     "signal": "stateChanged(int)",
-                    "slot": lambda x: self.setInputValue("animate_sinogram", False if not x else True)
+                    "slot": lambda x: self.setInputValue("fast_mode", False if not x else True)  # in the linux, for Qt, 2 means True
                 },
             }
         }
@@ -92,7 +93,7 @@ class Window(QWidget):
                 "rotate_angle": {
                     "object": QSpinBox(),
                     "position": (1, 2),
-                    "signal": "valueChanged()",
+                    "signal": "valueChanged(int)",
                     "slot": lambda x: self.setInputValue("rotate_angle", x)
                 },
                 "theta_label": {
@@ -102,7 +103,7 @@ class Window(QWidget):
                 "theta": {
                     "object": QSpinBox(),
                     "position": (2, 2),
-                    "signal": "valueChanged()",
+                    "signal": "valueChanged(int)",
                     "slot": lambda x: self.setInputValue("theta_angle", x)
                 },
                 "detectors_num_label": {
@@ -112,7 +113,7 @@ class Window(QWidget):
                 "detectors_num": {
                     "object": QSpinBox(),
                     "position": (3, 2),
-                    "signal": "valueChanged()",
+                    "signal": "valueChanged(int)",
                     "slot": lambda x: self.setInputValue("detectors_number", x)
                 },
                 "detectors_distance_label": {
@@ -122,18 +123,8 @@ class Window(QWidget):
                 "detectors_distance": {
                     "object": QSpinBox(),
                     "position": (4, 2),
-                    "signal": "valueChanged()",
+                    "signal": "valueChanged(int)",
                     "slot": lambda x: self.setInputValue("detectors_distance", x)
-                },
-                "animation_interval_label": {
-                    "object": QLabel("Animation interval"),
-                    "position": (5, 1)
-                },
-                "animation_interval": {
-                    "object": QSpinBox(),
-                    "position": (5, 2),
-                    "signal": "valueChanged()",
-                    "slot": lambda x: self.setInputValue("animation_interval", x)
                 }
             }
         }
@@ -167,6 +158,38 @@ class Window(QWidget):
             }
         }
 
+        self.plots_layout["items"]["img_fig"]["object"].setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.plots_layout["items"]["img_fig"]["object"].setScaledContents(True)
+        self.plots_layout["items"]["img_fig"]["object"].setFrameStyle(QFrame.Panel | QFrame.Plain)
+        self.plots_layout["items"]["img_fig"]["object"].setLineWidth(1)
+
+        self.plots_layout["items"]["radon_fig"]["object"].setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.plots_layout["items"]["radon_fig"]["object"].setScaledContents(True)
+        self.plots_layout["items"]["radon_fig"]["object"].setFrameStyle(QFrame.Panel | QFrame.Plain)
+        self.plots_layout["items"]["radon_fig"]["object"].setLineWidth(1)
+
+        self.plots_layout["items"]["iradon_fig"]["object"].setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.plots_layout["items"]["iradon_fig"]["object"].setScaledContents(True)
+        self.plots_layout["items"]["iradon_fig"]["object"].setFrameStyle(QFrame.Panel | QFrame.Plain)
+        self.plots_layout["items"]["iradon_fig"]["object"].setLineWidth(1)
+
+        self.plots_layout["items"]["animation_img"]["object"].setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.plots_layout["items"]["animation_sinogram"]["object"].setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.plots_layout["items"]["animation_img"]["object"].setDisabled(True)
+        self.plots_layout["items"]["animation_sinogram"]["object"].setDisabled(True)
+
+        self.inputs_layout["items"]["theta"]["object"].setMinimum(0)
+        self.inputs_layout["items"]["theta"]["object"].setMaximum(360)
+        self.inputs_layout["items"]["rotate_angle"]["object"].setMinimum(1)
+        self.inputs_layout["items"]["rotate_angle"]["object"].setMaximum(179)
+        self.inputs_layout["items"]["detectors_num"]["object"].setMinimum(2)
+        self.inputs_layout["items"]["detectors_num"]["object"].setMaximum(1000)
+        self.inputs_layout["items"]["detectors_distance"]["object"].setMinimum(1)
+        self.inputs_layout["items"]["detectors_distance"]["object"].setDisabled(True)
+
+        self.buttons_layout["items"]["run"]["object"].setDisabled(True)
+        self.buttons_layout["items"]["dicom"]["object"].setDisabled(True)
+
         self.createLayout(self.aggregated_layouts)
         self.setLayout(self.aggregated_layouts["object"])
 
@@ -195,27 +218,64 @@ class Window(QWidget):
 
     def load(self):
         filename = QFileDialog.getOpenFileName(self, "Open image", ".", "Image Files (*.png *.jpg *.bmp)", )
-        self.inputs["img"] = io.imread(path.expanduser(filename[0]), as_gray=True)
-        ax = self.ct.img_fig.add_subplot(1, 1, 1)
-        ax.imshow(self.inputs["img"], cmap="gray")
-        self.ct.img_fig.canvas.draw()
+        img = io.imread(path.expanduser(filename[0]))  # rgb
+
+        circle_inside_img_radius = sqrt(img.shape[0] ** 2 + img.shape[1] ** 2) // 2
+
+        fig = self.plots_layout["items"]["img_fig"]["object"]
+        fig.setPixmap(array2pixmap(img))
+
+        self.inputs["img"] = rgb2greyscale(img)
+        self.inputs_layout["items"]["detectors_distance"]["object"].setMaximum(2 * circle_inside_img_radius)
+        self.inputs_layout["items"]["detectors_distance"]["object"].setEnabled(True)
+        self.buttons_layout["items"]["run"]["object"].setEnabled(True)
 
     def start(self):
-        try:
-            self.ct.img = self.inputs["img"]
-            self.ct.rotate_angle = self.inputs["rotate_angle"]
-            self.ct.theta = self.inputs["theta_angle"]
-            self.ct.detectors_number = self.inputs["detectors_number"]
-            self.ct.far_detectors_distance = self.inputs["detectors_distance"]
+        runStatus = self.buttons_layout["items"]["run"]["object"].isEnabled()
+        loadStauts = self.buttons_layout["items"]["load"]["object"].isEnabled()
+        dicomStatus = self.buttons_layout["items"]["dicom"]["object"].isEnabled()
 
-            self.ct.interactive(self.inputs["animate_img"], self.inputs["animate_sinogram"], self.inputs["animation_interval"])  # set drawing image and sinogram every iteration
-            self.ct.setCmap('gray')
-            self.ct.run()
-        except Exception as msg:
-            QErrorMessage(self).showMessage(*msg.args)
+        self.buttons_layout["items"]["run"]["object"].setEnabled(False)
+        self.buttons_layout["items"]["load"]["object"].setEnabled(False)
+        self.buttons_layout["items"]["dicom"]["object"].setEnabled(False)
+
+        def task():
+            try:
+                CT = FastCT if self.inputs["fast_mode"] else InteractiveCT
+
+                ct = CT(self.inputs["img"], self.inputs["rotate_angle"], self.inputs["theta_angle"],
+                        self.inputs["detectors_number"], self.inputs["detectors_distance"])
+
+                ct.setPrint(True)
+
+                self.inputs["sinogram"], self.inputs["result"] = ct.run()
+
+                if not self.inputs["fast_mode"]:
+                    self.inputs["animate_img"], self.inputs["animate_sinogram"] = ct.getIntermediatePlots()
+
+                self.plots_layout["items"]["radon_fig"]["object"].setPixmap(
+                    array2pixmap(greyscale2rgb(self.inputs["sinogram"])))
+                self.plots_layout["items"]["iradon_fig"]["object"].setPixmap(
+                    array2pixmap(greyscale2rgb(self.inputs["result"])))
+
+                if self.inputs["fast_mode"]:
+                    self.plots_layout["items"]["animation_img"]["object"].setEnabled(True)
+                    self.plots_layout["items"]["animation_sinogram"]["object"].setEnabled(True)
+                else:
+                    self.plots_layout["items"]["animation_img"]["object"].setDisabled(True)
+                    self.plots_layout["items"]["animation_sinogram"]["object"].setDisabled(True)
+
+            except Exception as msg:
+                QErrorMessage(self).showMessage(*msg.args)
+            finally:
+                self.buttons_layout["items"]["run"]["object"].setEnabled(runStatus)
+                self.buttons_layout["items"]["load"]["object"].setEnabled(loadStauts)
+                self.buttons_layout["items"]["dicom"]["object"].setEnabled(dicomStatus)
+
+        thread = Thread(target=task)
+        thread.start()
 
     def setInputValue(self, key, value):
-        print(key, value)
         self.inputs[key] = value
 
     def saveDicom(self):
@@ -225,10 +285,8 @@ class Window(QWidget):
 def main():
     app = QApplication()
     app.setApplicationName("Computer Tomography Simulation")
-
     w = Window()
     w.show()
-
     exit(app.exec_())
 
 
