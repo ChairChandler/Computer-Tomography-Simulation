@@ -3,19 +3,19 @@ import numpy as np
 
 
 class LineRadiation:
-    def __init__(self, img, calcType: "mean | sum"):
+    def __init__(self, img, calcType: "mean | sqrt"):
         self.img = img
         self.amount = np.ones(img.shape)
 
-        if calcType != "mean" and calcType != "sum":
+        if calcType != "mean" and calcType != "sqrt":
             raise ValueError("Calculation type have to be mean or sum.")
         else:
             if calcType == "mean":
                 self.operation = self.next_mean
                 self.end_operation = self.end_mean
-            elif calcType == "sum":
-                self.operation = self.next_sum
-                self.end_operation = self.end_sum
+            elif calcType == "sqrt":
+                self.operation = self.next_sqrt
+                self.end_operation = self.end_sqrt
 
     def next(self, detectors_values, emiter: "(x, y)", detectors: "[(x, y) ...]"):
         self.find_lines_pixels(detectors_values, emiter, detectors, self.operation)
@@ -55,11 +55,11 @@ class LineRadiation:
     def end_mean(self):
         self.img /= self.amount
 
-    def next_sum(self,  pixels_x, pixels_y, detector_value):
+    def next_sqrt(self,  pixels_x, pixels_y, detector_value):
         """
-            Add emitter-detector line value to the intersected pixels.
+            Add emitter-detector line value to the intersected pixels and calculate square root.
         """
         self.img[pixels_x, pixels_y] += detector_value
 
-    def end_sum(self):
-        pass
+    def end_sqrt(self):
+        self.img = np.sqrt(self.img)

@@ -22,6 +22,10 @@ class Window(QWidget):
             "theta_angle": 0,
             "detectors_number": 2,
             "detectors_distance": 1,
+            "animation_img_frames": None,
+            "animation_sinogram_frames": None,
+            "animation_sinogram_actual_frame": None,
+            "animation_img_actual_frame": None
         }
 
         # First layout level
@@ -44,13 +48,13 @@ class Window(QWidget):
                     "object": QSlider(Qt.Horizontal),
                     "position": (2, 1),
                     "signal": "valueChanged(int)",
-                    "slot": lambda x: self.setInputValue("animation_img", False if not x else True)
+                    "slot": lambda x: self.setInputValue("animation_img_actual_frame", x/100) or self.changeFrame("img_fig")
                 },
                 "animation_sinogram": {
                     "object": QSlider(Qt.Horizontal),
                     "position": (2, 2),
                     "signal": "valueChanged(int)",
-                    "slot": lambda x: self.setInputValue("animation_sinogram", False if not x else True)
+                    "slot": lambda x: self.setInputValue("animation_sinogram_actual_frame", x/100) or self.changeFrame("radon_fig")
                 },
                 "fast_mode": {
                     "object": QCheckBox("Fast mode"),
@@ -230,6 +234,9 @@ class Window(QWidget):
         self.inputs_layout["items"]["detectors_distance"]["object"].setEnabled(True)
         self.buttons_layout["items"]["run"]["object"].setEnabled(True)
 
+        self.plots_layout["items"]["animation_img"]["object"].setDisabled(True)
+        self.plots_layout["items"]["animation_sinogram"]["object"].setDisabled(True)
+
     def start(self):
         runStatus = self.buttons_layout["items"]["run"]["object"].isEnabled()
         loadStauts = self.buttons_layout["items"]["load"]["object"].isEnabled()
@@ -251,22 +258,25 @@ class Window(QWidget):
                 self.inputs["sinogram"], self.inputs["result"] = ct.run()
 
                 if not self.inputs["fast_mode"]:
-                    self.inputs["animate_img"], self.inputs["animate_sinogram"] = ct.getIntermediatePlots()
+                    self.inputs["animation_img_frames"], self.inputs["animation_sinogram_frames"] = ct.getIntermediatePlots()
+                    self.inputs["animation_img_frames"].insert(0, self.inputs["img"])
+                    self.inputs["animation_sinogram_frames"].append(self.inputs["sinogram"])
+
+                    self.plots_layout["items"]["animation_img"]["object"].setEnabled(True)
+                    self.plots_layout["items"]["animation_img"]["object"].setValue(0)
+                    self.plots_layout["items"]["animation_sinogram"]["object"].setEnabled(True)
+                    self.plots_layout["items"]["animation_sinogram"]["object"].setValue(100)
+                else:
+                    self.plots_layout["items"]["animation_img"]["object"].setDisabled(True)
+                    self.plots_layout["items"]["animation_sinogram"]["object"].setDisabled(True)
 
                 self.plots_layout["items"]["radon_fig"]["object"].setPixmap(
                     array2pixmap(greyscale2rgb(self.inputs["sinogram"])))
                 self.plots_layout["items"]["iradon_fig"]["object"].setPixmap(
                     array2pixmap(greyscale2rgb(self.inputs["result"])))
 
-                if self.inputs["fast_mode"]:
-                    self.plots_layout["items"]["animation_img"]["object"].setEnabled(True)
-                    self.plots_layout["items"]["animation_sinogram"]["object"].setEnabled(True)
-                else:
-                    self.plots_layout["items"]["animation_img"]["object"].setDisabled(True)
-                    self.plots_layout["items"]["animation_sinogram"]["object"].setDisabled(True)
-
             except Exception as msg:
-                QErrorMessage(self).showMessage(*msg.args)
+                print(msg)
             finally:
                 self.buttons_layout["items"]["run"]["object"].setEnabled(runStatus)
                 self.buttons_layout["items"]["load"]["object"].setEnabled(loadStauts)
@@ -277,6 +287,20 @@ class Window(QWidget):
 
     def setInputValue(self, key, value):
         self.inputs[key] = value
+
+    def changeFrame(self, label_type):
+        if label_type == "img_fig":
+            frame_id = round(self.inputs["animation_img_actual_frame"] * (len(self.inputs["animation_img_frames"]) - 1))
+            frame = self.inputs["animation_img_frames"][frame_id]
+
+            fig = self.plots_layout["items"]["img_fig"]["object"]
+            fig.setPixmap(array2pixmap(greyscale2rgb(frame)))
+        elif label_type == "radon_fig":
+            frame_id = round(self.inputs["animation_sinogram_actual_frame"] * (len(self.inputs["animation_sinogram_frames"]) - 1))
+            frame = self.inputs["animation_sinogram_frames"][frame_id]
+
+            fig = self.plots_layout["items"]["radon_fig"]["object"]
+            fig.setPixmap(array2pixmap(greyscale2rgb(frame)))
 
     def saveDicom(self):
         pass

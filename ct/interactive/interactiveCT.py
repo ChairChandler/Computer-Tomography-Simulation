@@ -14,7 +14,9 @@ class InteractiveCT(CT):
         """
         super().__init__(img, rotate_angle, theta, detectors_number, far_detectors_distance)
 
-        self.step = 10
+        self.iter = 0
+        self.stopIter = 360 // rotate_angle
+        self.step = 1
         self.rotate_angle = rotate_angle
         self.img_plot = []
         self.sinogram_plot = []
@@ -26,11 +28,10 @@ class InteractiveCT(CT):
         return self.img_plot, self.sinogram_plot
 
     def animate(self, circle, sinogram):
-        for i in range(360 // self.rotate_angle):
-            if not i % self.step:
-                self.drawImg(circle)
-                self.drawSinogram(sinogram)
-            yield
+        if not self.iter % self.step and self.iter < self.stopIter:
+            self.drawImg(circle)
+            self.drawSinogram(sinogram)
+        self.iter += 1
 
     def drawImg(self, circle):
         img_radon = np.array(self.img, copy=True)
