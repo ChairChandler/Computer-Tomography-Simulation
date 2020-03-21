@@ -9,12 +9,12 @@ def radonTransform(img, rotate_angle, theta, detectors_number, far_detectors_dis
                    far_detectors_distance, np.deg2rad(theta))
 
     radian_rotate_angle = np.deg2rad(rotate_angle)
-    sinogram = np.zeros(shape=(360 // rotate_angle, detectors_number))
+    sinogram = np.zeros(shape=(180 // rotate_angle, detectors_number))
 
     rad = Radiation(img, detectors_number)
 
-    for i in range(360 // rotate_angle):
-        animate_func(circle, sinogram)
+    for i in range(180 // rotate_angle):
+        animate_func(sinogram)
         sinogram[i] = rad.calculate(circle.emiter, circle.detectors)
         circle.rotate(radian_rotate_angle)
 

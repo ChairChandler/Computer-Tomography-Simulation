@@ -3,12 +3,12 @@ import numpy as np
 
 
 class LineRadiation:
-    def __init__(self, img, calcType: "mean | sqrt"):
+    def __init__(self, img, calcType: "mean | sqrt | sum"):
         self.img = img
         self.amount = np.ones(img.shape)
 
         if calcType != "mean" and calcType != "sqrt":
-            raise ValueError("Calculation type have to be mean or sum.")
+            raise ValueError("Calculation type have to be mean or sqrt.")
         else:
             if calcType == "mean":
                 self.operation = self.next_mean
@@ -53,7 +53,9 @@ class LineRadiation:
         self.amount[pixels_x, pixels_y] += 1
 
     def end_mean(self):
-        self.img /= self.amount
+        x = self.img / self.amount
+        x = np.max(x)
+        self.img /= x if x > 0 else 1
 
     def next_sqrt(self,  pixels_x, pixels_y, detector_value):
         """

@@ -15,37 +15,32 @@ class InteractiveCT(CT):
         super().__init__(img, rotate_angle, theta, detectors_number, far_detectors_distance)
 
         self.iter = 0
-        self.stopIter = 360 // rotate_angle
+        self.stopIter = 180 // rotate_angle
         self.step = 1
         self.rotate_angle = rotate_angle
-        self.img_plot = []
-        self.sinogram_plot = []
+        self.sinogram_plots = []
+        self.result_plots = []
 
     def run(self):
         return super().run()
 
     def getIntermediatePlots(self):
-        return self.img_plot, self.sinogram_plot
+        return self.sinogram_plots, self.result_plots
 
-    def animate(self, circle, sinogram):
+    def animate_radon(self, sinogram):
         if not self.iter % self.step and self.iter < self.stopIter:
-            self.drawImg(circle)
-            self.drawSinogram(sinogram)
+            sinogram = np.array(sinogram.T, copy=True)
+            self.sinogram_plots.append(sinogram)
         self.iter += 1
 
-    def drawImg(self, circle):
-        img_radon = np.array(self.img, copy=True)
+    def resetIter(self):
+        self.iter = 0
 
-        for x, y in circle.detectors:
-            pixels = zip(*line(circle.emiter[1], circle.emiter[0], y, x))
-
-            # zoptymalizowac
-            for pix_x, pix_y in pixels:
-                if 0 <= pix_x < img_radon.shape[0] and 0 <= pix_y < img_radon.shape[1]:
-                    img_radon[pix_x, pix_y] = 1
-
-        self.img_plot.append(img_radon)
-
-    def drawSinogram(self, sinogram):
-        sinogram = np.array(super().rotateSinogram(sinogram)[:, ::-1], copy=True)
-        self.sinogram_plot.append(sinogram)
+    def animate_iradon(self, img, amount):
+        if not self.iter % self.step and self.iter < self.stopIter:
+            img_iradon = np.array(img, copy=True)
+            x = img_iradon / amount
+            x = np.max(x)
+            img_iradon /= x if x > 0 else 1
+            self.result_plots.append(img_iradon)
+        self.iter += 1

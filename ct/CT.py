@@ -1,7 +1,7 @@
 from ct.radon.radonTransform import radonTransform
 from ct.iradon.iradonTransform import iradonTransform
 from abc import abstractmethod
-
+import numpy as np
 
 class CT:
     def __init__(self, img, rotate_angle, theta, detectors_number, far_detectors_distance):
@@ -30,24 +30,37 @@ class CT:
             print('Radon transform starting.')
 
         sinogram = radonTransform(self.img, self.rotate_angle, self.theta,
-                                  self.detectors_number, self.far_detectors_distance, self.animate)
+                                  self.detectors_number, self.far_detectors_distance, self.animate_radon)
+
+        self.resetIter()
 
         if self.print:
             print('Radon transform ended, inverse radon transform starting.')
 
-        img = iradonTransform(self.img.shape, sinogram, self.rotate_angle, self.theta, self.far_detectors_distance)
+        img = iradonTransform(self.img.shape, sinogram, self.rotate_angle, self.theta, self.far_detectors_distance, self.animate_iradon)
 
         if self.print:
             print('Inverse radon transform ended.')
 
-        return self.rotateSinogram(sinogram), img
-
-    @staticmethod
-    def rotateSinogram(sinogram):
-        return sinogram.T[:, ::-1]
+        sinogram /= np.max(sinogram)
+        return sinogram.T, img
 
     @abstractmethod
-    def animate(self, *args, **kwargs):
+    def animate_radon(self, *args, **kwargs):
+        """
+            Method to be overridden by derived class.
+        """
+        pass
+
+    @abstractmethod
+    def animate_iradon(self, *args, **kwargs):
+        """
+            Method to be overridden by derived class.
+        """
+        pass
+
+    @abstractmethod
+    def resetIter(self):
         """
             Method to be overridden by derived class.
         """
