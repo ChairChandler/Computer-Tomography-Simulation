@@ -1,18 +1,19 @@
 from ct.interactive.interactiveCT import InteractiveCT, CT as FastCT
 from PySide2.QtCore import SIGNAL, QObject, Qt
-from PySide2.QtWidgets import *
 from threading import Thread
 from skimage import io
 from math import sqrt
 from os import path
 from conversion import *
 from dicomWindow import *
+from datetime import datetime
 
 
 class MainWindow(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         self.resize(800, 800)
+        self.ct_start_datetime = None
 
         self.inputs = {
             "img": None,
@@ -82,12 +83,18 @@ class MainWindow(QWidget):
                     "signal": "clicked()",
                     "slot": self.start
                 },
-                "dicom": {
-                    "object": QPushButton("Dicom"),
+                "save_dicom": {
+                    "object": QPushButton("Save Dicom"),
                     "position": 3,
                     "signal": "clicked()",
                     "slot": self.saveDicom
                 },
+                "show_dicom": {
+                    "object": QPushButton("Show Dicom"),
+                    "position": 4,
+                    "signal": "clicked()",
+                    "slot": self.showDicom
+                }
             }
         }
         self.inputs_layout = {
@@ -181,7 +188,7 @@ class MainWindow(QWidget):
         self.plots_layout["items"]["iradon_fig"]["object"].setLineWidth(1)
 
         self.plots_layout["items"]["animation_slider"]["object"].setSizePolicy(QSizePolicy.Preferred,
-                                                                            QSizePolicy.Preferred)
+                                                                               QSizePolicy.Preferred)
         self.plots_layout["items"]["animation_slider"]["object"].setDisabled(True)
 
         self.inputs_layout["items"]["theta"]["object"].setMinimum(0)
@@ -194,7 +201,7 @@ class MainWindow(QWidget):
         self.inputs_layout["items"]["detectors_distance"]["object"].setDisabled(True)
 
         self.buttons_layout["items"]["run"]["object"].setDisabled(True)
-        self.buttons_layout["items"]["dicom"]["object"].setDisabled(True)
+        self.buttons_layout["items"]["save_dicom"]["object"].setDisabled(True)
 
         self.createLayout(self.aggregated_layouts)
         self.setLayout(self.aggregated_layouts["object"])
@@ -223,29 +230,31 @@ class MainWindow(QWidget):
                     QObject.connect(widget["object"], SIGNAL(widget["signal"]), widget["slot"])
 
     def load(self):
-        filename = QFileDialog.getOpenFileName(self, "Open image", ".", "Image Files (*.png *.jpg *.bmp)", )
-        img = io.imread(path.expanduser(filename[0]))  # rgb
+        filename = QFileDialog.getOpenFileName(self, "Open image", ".", "Image Files (*.png *.jpg *.bmp)")
+        if filename[0] == '':
+            return
+        else:
+            img = io.imread(path.expanduser(filename[0]))  # rgb
 
-        circle_inside_img_radius = sqrt(img.shape[0] ** 2 + img.shape[1] ** 2) // 2
+            circle_inside_img_radius = sqrt(img.shape[0] ** 2 + img.shape[1] ** 2) // 2
 
-        fig = self.plots_layout["items"]["img_fig"]["object"]
-        fig.setPixmap(array2pixmap(img))
+            fig = self.plots_layout["items"]["img_fig"]["object"]
+            fig.setPixmap(array2pixmap(img))
 
-        self.inputs["img"] = rgb2greyscale(img)
-        self.inputs_layout["items"]["detectors_distance"]["object"].setMaximum(2 * circle_inside_img_radius)
-        self.inputs_layout["items"]["detectors_distance"]["object"].setEnabled(True)
-        self.buttons_layout["items"]["run"]["object"].setEnabled(True)
+            self.inputs["img"] = rgb2greyscale(img)
+            self.inputs_layout["items"]["detectors_distance"]["object"].setMaximum(2 * circle_inside_img_radius)
+            self.inputs_layout["items"]["detectors_distance"]["object"].setEnabled(True)
+            self.buttons_layout["items"]["run"]["object"].setEnabled(True)
 
-        self.plots_layout["items"]["animation_slider"]["object"].setDisabled(True)
+            self.plots_layout["items"]["animation_slider"]["object"].setDisabled(True)
 
     def start(self):
         runStatus = self.buttons_layout["items"]["run"]["object"].isEnabled()
         loadStauts = self.buttons_layout["items"]["load"]["object"].isEnabled()
-        dicomStatus = self.buttons_layout["items"]["dicom"]["object"].isEnabled()
 
         self.buttons_layout["items"]["run"]["object"].setEnabled(False)
         self.buttons_layout["items"]["load"]["object"].setEnabled(False)
-        self.buttons_layout["items"]["dicom"]["object"].setEnabled(False)
+        self.buttons_layout["items"]["save_dicom"]["object"].setEnabled(False)
 
         def task():
             try:
@@ -254,6 +263,7 @@ class MainWindow(QWidget):
                 ct = CT(self.inputs["img"], self.inputs["rotate_angle"], self.inputs["theta_angle"],
                         self.inputs["detectors_number"], self.inputs["detectors_distance"])
 
+                self.ct_start_datetime = datetime.now()
                 self.inputs["sinogram"], self.inputs["result"] = ct.run()
                 self.normalizeImg(self.inputs["sinogram"])
 
@@ -264,25 +274,37 @@ class MainWindow(QWidget):
                     self.inputs["animation_sinogram_frames"].append(self.inputs["sinogram"])
                     self.inputs["animation_result_frames"].append(self.inputs["result"])
 
+                    self.preprocessFrames(self.inputs["animation_sinogram_frames"])
+                    self.preprocessFrames(self.inputs["animation_result_frames"])
+
                     self.plots_layout["items"]["animation_slider"]["object"].setEnabled(True)
                     self.plots_layout["items"]["animation_slider"]["object"].setValue(100)
                 else:
                     self.plots_layout["items"]["animation_slider"]["object"].setDisabled(True)
 
                 self.plots_layout["items"]["radon_fig"]["object"].setPixmap(
-                    array2pixmap(greyscale2rgb(self.inputs["sinogram"])))
+                    self.preprocessFrame(self.inputs["sinogram"]))
                 self.plots_layout["items"]["iradon_fig"]["object"].setPixmap(
-                    array2pixmap(greyscale2rgb(self.inputs["result"])))
+                    self.preprocessFrame(self.inputs["result"]))
 
             except Exception as msg:
-                print(msg)
+                QErrorMessage().showMessage(str(msg))
             finally:
                 self.buttons_layout["items"]["run"]["object"].setEnabled(runStatus)
                 self.buttons_layout["items"]["load"]["object"].setEnabled(loadStauts)
-                self.buttons_layout["items"]["dicom"]["object"].setEnabled(dicomStatus)
+                self.buttons_layout["items"]["save_dicom"]["object"].setEnabled(True)
 
         thread = Thread(target=task)
         thread.start()
+
+    @staticmethod
+    def preprocessFrames(frames):
+        for index, img in enumerate(frames):
+            frames[index] = array2pixmap(greyscale2rgb(img))
+
+    @staticmethod
+    def preprocessFrame(frame):
+        return array2pixmap(greyscale2rgb(frame))
 
     @staticmethod
     def normalizeImg(img):
@@ -298,17 +320,17 @@ class MainWindow(QWidget):
             frame = self.inputs["animation_sinogram_frames"][frame_id]
 
             fig = self.plots_layout["items"]["radon_fig"]["object"]
-            fig.setPixmap(array2pixmap(greyscale2rgb(frame)))
+            fig.setPixmap(frame)
         elif label_type == "iradon_fig":
             frame_id = round(
                 self.inputs["animation_result_actual_frame"] * (len(self.inputs["animation_result_frames"]) - 1))
             frame = self.inputs["animation_result_frames"][frame_id]
 
             fig = self.plots_layout["items"]["iradon_fig"]["object"]
-            fig.setPixmap(array2pixmap(greyscale2rgb(frame)))
+            fig.setPixmap(frame)
 
-    def loadDicom(self):
-        pass
+    def showDicom(self):
+        DicomShowDialog().exec_()
 
     def saveDicom(self):
-        pass
+        DicomSaveDialog(self.inputs["result"], self.ct_start_datetime).exec_()
