@@ -1,11 +1,11 @@
 import numpy as np
 from datetime import datetime
 from typing import Dict
-from conversion import *
+from conversion import Conversion
 from PySide2.QtCore import Qt
 import PySide2.QtWidgets as QtWidgets
+import pydicom as pd
 import pydicom.uid
-import pydicom
 
 
 class DicomSaveDialog(QtWidgets.QDialog):
@@ -15,7 +15,7 @@ class DicomSaveDialog(QtWidgets.QDialog):
         self.img = img
         self.date_time = date_time
 
-        self.inputs_data: Dict[str, None or str] = {
+        self.input_data: Dict[str, None or str] = {
             'PatientID': None,
             'PatientName': None,
             'PatientSex': None,
@@ -75,10 +75,10 @@ class DicomSaveDialog(QtWidgets.QDialog):
         if not self.validateInput():
             return False
         else:
-            self.inputs_data["PatientID"] = self.id_input.text()
-            self.inputs_data["PatientName"] = self.name_input.text()
-            self.inputs_data["PatientSex"] = 'M' if self.sex_input.currentText() == 'Male' else 'F'
-            self.inputs_data["ImageComments"] = self.comments_input.toPlainText()
+            self.input_data["PatientID"] = self.id_input.text()
+            self.input_data["PatientName"] = self.name_input.text()
+            self.input_data["PatientSex"] = 'M' if self.sex_input.currentText() == 'Male' else 'F'
+            self.input_data["ImageComments"] = self.comments_input.toPlainText()
 
             return True
 
@@ -90,30 +90,49 @@ class DicomSaveDialog(QtWidgets.QDialog):
             if filename == '':
                 return
             else:
-                file_meta = pydicom.dataset.Dataset()
-                file_meta.MediaStorageSOPClassUID = '1.2.840.10008.5.1.4.1.1.2'
-                file_meta.MediaStorageSOPInstanceUID = '1.2.3'
-                file_meta.ImplementationClassUID = '1.2.3.4'
+                fm = pd.Dataset()
 
-                ds = pydicom.dataset.FileDataset(None, {}, file_meta=file_meta, preamble=b"\0" * 128)
+                # CT Image Storage
+                fm.MediaStorageSOPClassUID = "1.2.840.10008.5.1.4.1.1.2"
+                fm.MediaStorageSOPInstanceUID = pd.uid.generate_uid()
+                fm.TransferSyntaxUID = pd.uid.ExplicitVRLittleEndian
+                fm.ImplementationClassUID = pd.uid.generate_uid()
 
-                ds.ContentDate = f"{self.date_time.year}{self.date_time.month}{self.date_time.day}"
-                ds.ContentTime = f"{self.date_time.hour}{self.date_time.minute}{self.date_time.second}"
-                ds.PatientName = self.inputs_data["PatientName"]
-                ds.PatientID = self.inputs_data["PatientID"]
-                ds.PatientSex = self.inputs_data["PatientSex"]
-                ds.ImageComments = self.inputs_data["ImageComments"]
-                ds.PixelData = greyscale2rgb(self.img).tobytes()
-                ds.BitsAllocated = 8
-                ds.Rows = self.img.shape[0]
-                ds.Columns = self.img.shape[1]
-                ds.PixelRepresentation = 0
+                ds = pd.FileDataset(None, {})
+
+                ds.file_meta = fm
+
+                # CT Image Storage
+                ds.SOPClassUID = "1.2.840.10008.5.1.4.1.1.2"
+                ds.SOPInstanceUID = pd.uid.generate_uid()
+
+                ds.ContentDate = f"{self.date_time.year:04}{self.date_time.month:02}{self.date_time.day:02}"
+                ds.ContentTime = f"{self.date_time.hour:02}{self.date_time.minute:02}{self.date_time.second:02}"
+
+                ds.StudyInstanceID = pd.uid.generate_uid()
+                ds.SeriesInstanceID = pd.uid.generate_uid()
+
+                ds.Modality = "CT"
+                ds.ConversionType = 'WSD'  # workstation
+                ds.ImageType = r"ORIGINAL\PRIMARY\AXIAL"
+
+                ds.PatientName = self.input_data["PatientName"]
+                ds.PatientID = self.input_data["PatientID"]
+                ds.PatientSex = self.input_data["PatientSex"]
+                ds.ImageComments = self.input_data["ImageComments"]
+
+                ds.PixelData = self.img.astype(np.uint8).tobytes()
+                ds.Rows, ds.Columns = self.img.shape
                 ds.SamplesPerPixel = 1
-                ds.PhotometricInterpretation = 'RGB'
+                ds.PixelRepresentation = 0
+                ds.PhotometricInterpretation = "MONOCHROME2"
+                ds.BitsAllocated, ds.BitsStored = 8, 8
+                ds.HighBit = 7
 
                 ds.is_little_endian = True
-                ds.is_implicit_VR = True
-                ds.save_as(f"{filename}.dcm")
+                ds.is_implicit_VR = False
+
+                ds.save_as(f"{filename}.dcm", write_like_original=False)
                 self.close()
 
 
@@ -121,32 +140,28 @@ class DicomShowDialog(QtWidgets.QDialog):
     def __init__(self):
         super().__init__(None)
         self.setWindowTitle('Load DICOM file')
-        self.setFixedSize(self.size())
 
         self.img = None
-        self.date_time = None
-        self.patientName = None
-        self.patientID = None
-        self.patientSex = None
-        self.imageComments = None
-
+        self.ct_date_time = None
         self.img_fig = None
-        self.patientID = None
-        self.patientName = None
-        self.patientSex = None
-        self.imageComments = None
+        self.patient_ID = None
+        self.patient_name = None
+        self.patient_sex = None
+        self.image_comments = None
 
         self.createLayout()
 
     def createLayout(self) -> None:
-        self.patientID = QtWidgets.QTextEdit()
-        self.patientName = QtWidgets.QTextEdit()
-        self.patientSex = QtWidgets.QTextEdit()
+        self.ct_date_time = QtWidgets.QLabel()
+        self.patient_ID = QtWidgets.QTextEdit()
+        self.patient_name = QtWidgets.QTextEdit()
+        self.patient_sex = QtWidgets.QTextEdit()
 
         form = QtWidgets.QFormLayout()
-        form.addRow(QtWidgets.QLabel('Patient ID'), self.patientID)
-        form.addRow(QtWidgets.QLabel('Patient name'), self.patientName)
-        form.addRow(QtWidgets.QLabel('Patient sex'), self.patientSex)
+        form.addRow(self.ct_date_time)
+        form.addRow(QtWidgets.QLabel('Patient ID'), self.patient_ID)
+        form.addRow(QtWidgets.QLabel('Patient name'), self.patient_name)
+        form.addRow(QtWidgets.QLabel('Patient sex'), self.patient_sex)
 
         self.img_fig = QtWidgets.QLabel(self)
 
@@ -154,7 +169,7 @@ class DicomShowDialog(QtWidgets.QDialog):
         hbox.setAlignment(Qt.AlignHCenter)
         hbox.addWidget(self.img_fig)
 
-        self.imageComments = QtWidgets.QTextEdit()
+        self.image_comments = QtWidgets.QTextEdit()
 
         close = QtWidgets.QPushButton('Close')
         close.clicked.connect(self.close)
@@ -165,7 +180,7 @@ class DicomShowDialog(QtWidgets.QDialog):
         vbox = QtWidgets.QVBoxLayout()
         vbox.addLayout(form)
         vbox.addLayout(hbox)
-        vbox.addWidget(self.imageComments)
+        vbox.addWidget(self.image_comments)
         vbox.addLayout(grid)
 
         self.setLayout(vbox)
@@ -182,13 +197,15 @@ class DicomShowDialog(QtWidgets.QDialog):
         else:
             ds = pydicom.dcmread(filename)
             ds.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
-            self.img_fig.setPixmap(array2qpixmap(ds.pixel_array.copy()))
-            self.date_time = datetime(int(ds.ContentDate[:4]), int(ds.ContentDate[4:5]), int(ds.ContentDate[5:7]),
-                                      int(ds.ContentTime[:2]), int(ds.ContentTime[2:4]), int(ds.ContentTime[4:6]))
+            self.img_fig.setPixmap(Conversion().array2qpixmap(ds.pixel_array))
 
-            self.patientName.setText(str(ds.PatientName))
-            self.patientID.setText(str(ds.PatientID))
-            self.patientSex.setText(str(ds.PatientSex))
-            self.imageComments.setText(str(ds.ImageComments))
+            year, month, day = ds.ContentDate[:4], ds.ContentDate[4:6], ds.ContentDate[6:8]
+            hour, minute, second = ds.ContentTime[:2], ds.ContentTime[2:4], ds.ContentTime[4:6]
+
+            self.ct_date_time.setText(f"{year}/{month}/{day} {hour}:{minute}:{second}")
+            self.patient_name.setText(str(ds.PatientName))
+            self.patient_ID.setText(str(ds.PatientID))
+            self.patient_sex.setText(str(ds.PatientSex))
+            self.image_comments.setText(str(ds.ImageComments))
 
             return True
