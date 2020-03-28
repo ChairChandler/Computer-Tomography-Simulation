@@ -1,35 +1,39 @@
-from skimage.draw import line
 import numpy as np
+from typing import Tuple, List, Callable, Union
+from skimage.draw import line
+from enum import Enum
 
 
 class LineRadiation:
-    def __init__(self, img, calcType: "mean | sqrt | sum"):
+    class Operation(Enum):
+        MEAN = 1
+        SQRT = 2
+
+    def __init__(self, img: np.ndarray, operation_type: Operation):
         self.img = img
         self.amount = np.ones(img.shape)
 
-        if calcType != "mean" and calcType != "sqrt":
-            raise ValueError("Calculation type have to be mean or sqrt.")
-        else:
-            if calcType == "mean":
-                self.operation = self.next_mean
-                self.end_operation = self.end_mean
-            elif calcType == "sqrt":
-                self.operation = self.next_sqrt
-                self.end_operation = self.end_sqrt
+        if operation_type == LineRadiation.Operation.MEAN:
+            self.operation = self.nextMean
+            self.end_operation = self.endMean
+        elif operation_type == LineRadiation.Operation.SQRT:
+            self.operation = self.nextSqrt
+            self.end_operation = self.endSqrt
 
-    def next(self, detectors_values, emiter: "(x, y)", detectors: "[(x, y) ...]"):
-        self.find_lines_pixels(detectors_values, emiter, detectors, self.operation)
+    def next(self, detectors_values: np.ndarray, emiter_pos: Tuple[int, int], detectors_pos: List[Tuple[int, int]]) -> None:
+        self.findLinesPixels(detectors_values, emiter_pos, detectors_pos, self.operation)
 
-    def end(self):
+    def end(self) -> np.ndarray:
         self.end_operation()
         return self.img
 
-    def find_lines_pixels(self, detectors_values, emiter: "(x, y)", detectors: "[(x, y) ...]", operation):
+    def findLinesPixels(self, detectors_values: np.ndarray, emiter_pos: Tuple[int, int], detectors_pos: List[Tuple[int, int]],
+                        operation: Callable[[List[int], List[int], Union[int, float]], None]) -> None:
         # local reference for speed up
         img_width, img_height = self.img.shape
 
-        for de_index, detector in enumerate(detectors):
-            rr, cc = line(emiter[1], emiter[0], detector[1], detector[0])  # find pixels
+        for de_index, detector in enumerate(detectors_pos):
+            rr, cc = line(emiter_pos[1], emiter_pos[0], detector[1], detector[0])  # find pixels
 
             start = 0
             for i in range(len(rr)):  # find correct pixels start index
@@ -45,23 +49,23 @@ class LineRadiation:
 
             operation(rr[start:stop + 1], cc[start:stop + 1], detectors_values[de_index])  # correct pixels
 
-    def next_mean(self, pixels_x, pixels_y, detector_value):
+    def nextMean(self, pixels_x: List[int], pixels_y: List[int], detector_value: Union[int, float]) -> None:
         """
             Add emitter-detector line value to the intersected pixels and calculate average.
         """
         self.img[pixels_x, pixels_y] += detector_value
         self.amount[pixels_x, pixels_y] += 1
 
-    def end_mean(self):
+    def endMean(self) -> None:
         x = self.img / self.amount
         x = np.max(x)
         self.img /= x if x > 0 else 1
 
-    def next_sqrt(self,  pixels_x, pixels_y, detector_value):
+    def nextSqrt(self, pixels_x: List[int], pixels_y: List[int], detector_value: Union[int, float]) -> None:
         """
             Add emitter-detector line value to the intersected pixels and calculate square root.
         """
         self.img[pixels_x, pixels_y] += detector_value
 
-    def end_sqrt(self):
+    def endSqrt(self) -> None:
         self.img = np.sqrt(self.img)

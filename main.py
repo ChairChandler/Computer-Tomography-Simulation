@@ -1,8 +1,8 @@
-from mainWindow import MainWindow
 from PySide2.QtWidgets import QApplication
+from gui import MainWindow
 
 
-def main():
+def main() -> None:
     app = QApplication()
     app.setApplicationName("Computer Tomography Simulation")
 
