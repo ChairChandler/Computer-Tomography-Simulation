@@ -4,7 +4,7 @@ from ct import CT
 
 
 class InteractiveCT(CT):
-    def __init__(self, img: np.ndarray, rotate_angle: int, start_angle: int, detectors_number: int, farthest_detectors_distance: int):
+    def __init__(self, img: np.ndarray, rotate_angle: int, start_angle: int, detectors_number: int, farthest_detectors_distance: int, use_filter: bool = False):
         """
             img: Image to simulate radon transform
             rotate_angle: Emiters and detectors_pos angle for next iteration in degrees
@@ -12,7 +12,7 @@ class InteractiveCT(CT):
             detectors_amount: Amount of detectors_pos
             farthest_detectors_distance: Distance in pixels between farthest detectors_pos
         """
-        super().__init__(img, rotate_angle, start_angle, detectors_number, farthest_detectors_distance)
+        super().__init__(img, rotate_angle, start_angle, detectors_number, farthest_detectors_distance, use_filter)
 
         self.iter = 0
         self.stopIter = 180 // rotate_angle

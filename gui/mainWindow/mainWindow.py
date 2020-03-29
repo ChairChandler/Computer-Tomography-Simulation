@@ -24,6 +24,7 @@ class MainWindow(QtWidgets.QWidget):
             "sinogram": None,
             "result": None,
             "fast_mode": False,
+            "filter_mode": False,
             "rotate_angle": 1,
             "theta_angle": 0,
             "detectors_amount": 2,
@@ -62,13 +63,26 @@ class MainWindow(QtWidgets.QWidget):
                                       or self.changeFrame("radon_fig")
                                       or self.changeFrame("iradon_fig")
                 },
-                "fast_mode": {
-                    "object": QtWidgets.QCheckBox("Fast mode"),
+                "image_options": {
+                    "object": QtWidgets.QVBoxLayout(),
                     "position": (2, 3),
-                    "signal": "stateChanged(int)",
-                    "slot": lambda x: self.setInputValue("fast_mode", False if not x else True)
-                    # in the linux, for Qt, 2 means True
-                },
+                    "items": {
+                        "fast_mode": {
+                            "object": QtWidgets.QCheckBox("Fast mode"),
+                            "position": 1,
+                            "signal": "stateChanged(int)",
+                            "slot": lambda x: self.setInputValue("fast_mode", False if not x else True)
+                            # in the linux, for Qt, 2 means True
+                        },
+                        "filter_mode": {
+                            "object": QtWidgets.QCheckBox("Filter mode"),
+                            "position": 2,
+                            "signal": "stateChanged(int)",
+                            "slot": lambda x: self.setInputValue("filter_mode", False if not x else True)
+                            # in the linux, for Qt, 2 means True
+                        }
+                    }
+                }
             }
         }
         self.buttons_layout = {
@@ -264,7 +278,7 @@ class MainWindow(QtWidgets.QWidget):
                 selectedCT = CT if self.inputs["fast_mode"] else InteractiveCT
 
                 ct = selectedCT(self.inputs["img"], self.inputs["rotate_angle"], self.inputs["theta_angle"],
-                                self.inputs["detectors_amount"], self.inputs["detectors_distance"])
+                                self.inputs["detectors_amount"], self.inputs["detectors_distance"], self.inputs["filter_mode"])
 
                 self.ct_start_datetime = datetime.now()
                 self.inputs["sinogram"], self.inputs["result"] = ct.run()

@@ -8,7 +8,7 @@ import logging
 
 class CT:
     def __init__(self, img: np.ndarray, rotate_angle: int, start_angle: int, detectors_number: int,
-                 farthest_detectors_distance: int):
+                 farthest_detectors_distance: int, use_filter: bool = False):
         """
             img: Image to simulate radon transform
             rotate_angle: Emiters and detectors_pos angle for next iteration in degrees
@@ -25,6 +25,7 @@ class CT:
             self.theta = start_angle
             self.detectors_number = detectors_number
             self.far_detectors_distance = farthest_detectors_distance
+            self.use_filter = use_filter
             self.logger = logging.getLogger(__name__)
             self.logger.addHandler(logging.StreamHandler())
 
@@ -44,7 +45,7 @@ class CT:
             self.logger.info('Radon transform ended, inverse radon transform starting.')
 
         img = iradonTransform(self.img.shape, sinogram, self.rotate_angle, self.theta, self.far_detectors_distance,
-                              self.saveIradonFrame)
+                              self.use_filter, self.saveIradonFrame)
 
         if self.print:
             self.logger.info('Inverse radon transform ended.')
