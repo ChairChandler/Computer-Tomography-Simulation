@@ -1,7 +1,0 @@
-language: python
-install:
-  - pip3 install numpy
-  - pip install scikit-image
-  
-script:
-  - python main.py Circle.jpg
