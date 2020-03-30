@@ -4,9 +4,16 @@ from typing import Tuple
 
 class Round:
     """
-        Helps simulates rounding emitter and detectors_pos around img.
+    Simulates rounding emitter and detectors around image.
     """
     def __init__(self, center: Tuple[float, float], radius: float, detectors_amount: int, farthest_detectors_distance: int, start_angle: float):
+        """
+        :param center: center point position
+        :param radius: round radius
+        :param detectors_amount: amount of detectors_pos
+        :param farthest_detectors_distance: distance in pixels between farthest detectors_pos
+        :param start_angle: initial degree in degrees
+        """
         self.center = center
         self.radius = radius
         self.theta = start_angle
@@ -45,7 +52,9 @@ class Round:
 
     def rotate(self, angle: float) -> None:
         """
-            Rotate round by angle.
+        Rotate round by angle.
+        :param angle: radian angle
+        :return: None
         """
         self.angle += angle
         self.calculateEmiterPosition()

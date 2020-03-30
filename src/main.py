@@ -1,5 +1,5 @@
 from PySide2.QtWidgets import QApplication
-from gui import MainWindow
+from src.gui import MainWindow
 
 
 def main() -> None:

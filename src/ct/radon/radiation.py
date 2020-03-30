@@ -4,13 +4,19 @@ from skimage.draw import line
 
 
 class Radiation:
+    """
+    Calculates radiation from emitter to detectors.
+    """
     def __init__(self, img: np.ndarray, detectors_amount: int):
         self.img = img
         self.detectors_received_brightness = np.ndarray(shape=(detectors_amount,))
 
     def calculate(self, emiter_pos: Tuple[int, int], detectors_pos: List[Tuple[int, int]]) -> np.ndarray:
         """
-            Averaging pixels values on the emitter-detector line for every detector.
+        Averaging pixels values on the emitter-detector line for every detector.
+        :argument emiter_pos: emiter point position on round
+        :argument detectors_pos: detectors points positions on round
+        :return: detectors radiation value
         """
 
         # local reference for speed up

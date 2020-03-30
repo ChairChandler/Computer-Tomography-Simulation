@@ -4,6 +4,9 @@ from PySide2.QtGui import QPixmap, QImage, QColor
 
 
 class Conversion:
+    """
+    Helper class for numpy array conversion.
+    """
     def __init__(self, shape: Tuple[int, int] = None):
         if shape is not None:
             self.qimage = QImage(shape[1], shape[0], QImage.Format_RGB16)
@@ -15,6 +18,11 @@ class Conversion:
             self.is_init = False
 
     def array2qpixmap(self, img: np.ndarray) -> QPixmap:
+        """
+        Convert numpy array to PySide2 QPixmap.
+        :param img: numpy 2D or 3D array
+        :return: QPixmap
+        """
         img8 = img.astype(np.uint8)
         if self.is_init:
             height, width = self.height, self.width
@@ -39,6 +47,11 @@ class Conversion:
         return QPixmap(img)
 
     def rgb2greyscale(self, img: np.ndarray) -> np.ndarray:
+        """
+        Convert numpy rgb array to numpy grayscale array.
+        :param img: numpy 3D array
+        :return: np.ndarray
+        """
         if len(img.shape) != 3:
             return img
 
@@ -54,6 +67,11 @@ class Conversion:
         return array
 
     def greyscale2rgb(self, img: np.ndarray) -> np.ndarray:
+        """
+        Convert numpy greyscale array to numpy rgb array.
+        :param img: numpy 2D array
+        :return: np.ndarray
+        """
         if self.is_init:
             array = self.array_rgb
         else:

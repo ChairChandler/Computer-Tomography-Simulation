@@ -1,11 +1,21 @@
 import numpy as np
 from typing import Callable
-from ct.radon.radiation import Radiation
-from ct.round import Round
+from .radiation import Radiation
+from ..round import Round
 
 
 def radonTransform(img: np.ndarray, rotate_angle: int, start_angle: int, detectors_number: int, farthest_detectors_distance: int,
                    animate_func: Callable[[np.ndarray], None] = None) -> np.ndarray:
+    """
+    Construct sinogram from image.
+    :param img: numpy image
+    :param rotate_angle: angle in degree to rotate every iteration
+    :param start_angle: theta angle in degree
+    :param detectors_number: amount of detectors
+    :param farthest_detectors_distance: distance between farthest detectors
+    :param animate_func: function for save sinogram frames
+    :return: sinogram
+    """
 
     diameter = np.sqrt(img.shape[0] ** 2 + img.shape[1] ** 2)
     circle = Round((img.shape[0] / 2, img.shape[1] / 2), diameter / 2, detectors_number,

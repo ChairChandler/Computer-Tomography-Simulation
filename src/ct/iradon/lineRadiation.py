@@ -5,6 +5,9 @@ from enum import Enum
 
 
 class LineRadiation:
+    """
+    Reconstruct original image using sinogram.
+    """
     class Operation(Enum):
         MEAN = 1
         SQRT = 2
@@ -51,7 +54,11 @@ class LineRadiation:
 
     def nextMean(self, pixels_x: List[int], pixels_y: List[int], detector_value: Union[int, float]) -> None:
         """
-            Add emitter-detector line value to the intersected pixels and calculate average.
+        Add emitter-detector line value to the intersected pixels and calculate average.
+        :argument pixels_x: x position of pixels for corresponding y position
+        :argument pixels_y: y position of pixels for corresponding x position
+        :argument detector_value: pixels on the line value
+        :return: None
         """
         self.img[pixels_x, pixels_y] += detector_value
         self.amount[pixels_x, pixels_y] += 1
@@ -63,7 +70,11 @@ class LineRadiation:
 
     def nextSqrt(self, pixels_x: List[int], pixels_y: List[int], detector_value: Union[int, float]) -> None:
         """
-            Add emitter-detector line value to the intersected pixels and calculate square root.
+        Add emitter-detector line value to the intersected pixels and calculate square root.
+        :argument pixels_x: x position of pixels for corresponding y position
+        :argument pixels_y: y position of pixels for corresponding x position
+        :argument detector_value: pixels on the line value
+        :return: None
         """
         self.img[pixels_x, pixels_y] += detector_value
 

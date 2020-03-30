@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Any, List, Union, Tuple, Callable
-from ct import CT, InteractiveCT
+from src.ct import CT, InteractiveCT
 from PySide2.QtGui import QPixmap
 from PySide2.QtCore import SIGNAL, QObject, Qt
 import PySide2.QtWidgets as QtWidgets
@@ -8,9 +8,9 @@ from threading import Thread
 from skimage import io
 from math import sqrt
 from os import path
-from conversion import Conversion
-from gui.dicomWindow import *
+from ...conversion import Conversion
 from datetime import datetime
+from ..dicomWindow import *
 
 
 class MainWindow(QtWidgets.QWidget):
@@ -24,7 +24,6 @@ class MainWindow(QtWidgets.QWidget):
             "sinogram": None,
             "result": None,
             "fast_mode": False,
-            "filter_mode": False,
             "rotate_angle": 1,
             "theta_angle": 0,
             "detectors_amount": 2,
@@ -63,25 +62,12 @@ class MainWindow(QtWidgets.QWidget):
                                       or self.changeFrame("radon_fig")
                                       or self.changeFrame("iradon_fig")
                 },
-                "image_options": {
-                    "object": QtWidgets.QVBoxLayout(),
+                "fast_mode": {
+                    "object": QtWidgets.QCheckBox("Fast mode"),
                     "position": (2, 3),
-                    "items": {
-                        "fast_mode": {
-                            "object": QtWidgets.QCheckBox("Fast mode"),
-                            "position": 1,
-                            "signal": "stateChanged(int)",
-                            "slot": lambda x: self.setInputValue("fast_mode", False if not x else True)
-                            # in the linux, for Qt, 2 means True
-                        },
-                        "filter_mode": {
-                            "object": QtWidgets.QCheckBox("Filter mode"),
-                            "position": 2,
-                            "signal": "stateChanged(int)",
-                            "slot": lambda x: self.setInputValue("filter_mode", False if not x else True)
-                            # in the linux, for Qt, 2 means True
-                        }
-                    }
+                    "signal": "stateChanged(int)",
+                    "slot": lambda x: self.setInputValue("fast_mode", False if not x else True)
+                    # in the linux, for Qt, 2 means True
                 }
             }
         }
@@ -223,6 +209,11 @@ class MainWindow(QtWidgets.QWidget):
         self.setLayout(self.aggregated_layouts["object"])
 
     def createLayout(self, layout: Any) -> None:
+        """
+        Create layout via recursion.
+        :param layout: layout object to create
+        :return: None
+        """
         def addIf(operation: Callable, widget_dict: dict, widget_object, position: Tuple[int]):
             if "position" in widget_dict:
                 try:
@@ -246,7 +237,11 @@ class MainWindow(QtWidgets.QWidget):
                     QObject.connect(widget["object"], SIGNAL(widget["signal"]), widget["slot"])
 
     def loadImg(self) -> None:
-        filename = QtWidgets.QFileDialog.getOpenFileName(self, "Open img", "../..", "Image Files (*.png *.jpg *.bmp)")
+        """
+        Load image to process by CT.
+        :return: None
+        """
+        filename = QtWidgets.QFileDialog.getOpenFileName(self, "Open img", "../../..", "Image Files (*.png *.jpg *.bmp)")
         if filename[0] == '':
             return
         else:
@@ -278,9 +273,10 @@ class MainWindow(QtWidgets.QWidget):
                 selectedCT = CT if self.inputs["fast_mode"] else InteractiveCT
 
                 ct = selectedCT(self.inputs["img"], self.inputs["rotate_angle"], self.inputs["theta_angle"],
-                                self.inputs["detectors_amount"], self.inputs["detectors_distance"], self.inputs["filter_mode"])
+                                self.inputs["detectors_amount"], self.inputs["detectors_distance"])
 
                 self.ct_start_datetime = datetime.now()
+
                 self.inputs["sinogram"], self.inputs["result"] = ct.run()
                 self.normalizeImg(self.inputs["sinogram"])
 
@@ -316,23 +312,43 @@ class MainWindow(QtWidgets.QWidget):
 
     @staticmethod
     def preprocessFrames(frames: List[np.ndarray]) -> None:
+        """
+        Convert greyscale frames into rgb QPixmap.
+        :param frames: numpy greyscale ndarray list
+        :return: None
+        """
         conv = Conversion(frames[0].shape)
         for index, img in enumerate(frames):
             frames[index] = conv.array2qpixmap(conv.greyscale2rgb(img))
 
     @staticmethod
     def preprocessFrame(frame: np.ndarray) -> QPixmap:
+        """
+        Convert greyscale frame into rgb QPixmap.
+        :param frame: numpy greyscale ndarray
+        :return: QPixmap
+        """
         conv = Conversion()
         return conv.array2qpixmap(conv.greyscale2rgb(frame))
 
     @staticmethod
     def normalizeImg(img: np.ndarray) -> None:
+        """
+        Extends image pixel value range from [0-1] to [0-255].
+        :param img: image to normalize
+        :return: None
+        """
         img *= 255
 
     def setInputValue(self, key: str, value: Any) -> None:
         self.inputs[key] = value
 
     def changeFrame(self, label_type: str) -> None:
+        """
+        Load image from frames list into selected label.
+        :param label_type: selected label
+        :return: None
+        """
         if label_type == "radon_fig":
             frame_id = self.inputs["animation_sinogram_actual_frame"] * (len(self.inputs["animation_sinogram_frames"]) - 1)
             frame_id = round(frame_id)

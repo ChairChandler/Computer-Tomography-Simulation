@@ -1,7 +1,7 @@
 import numpy as np
 from datetime import datetime
 from typing import Dict
-from conversion import Conversion
+from src.conversion import Conversion
 from PySide2.QtCore import Qt
 import PySide2.QtWidgets as QtWidgets
 import pydicom as pd
@@ -9,7 +9,14 @@ import pydicom.uid
 
 
 class DicomSaveDialog(QtWidgets.QDialog):
+    """
+    Class for save patient informations to DICOM file.
+    """
     def __init__(self, img: np.ndarray, date_time: datetime):
+        """
+        :param img: image to save
+        :param date_time: ct operation start datetime
+        """
         super().__init__(None)
         self.setWindowTitle('Save to DICOM file')
         self.img = img
@@ -83,10 +90,14 @@ class DicomSaveDialog(QtWidgets.QDialog):
             return True
 
     def save(self) -> None:
+        """
+        Save input data into DICOM file.
+        :return: None
+        """
         if not self.parseInput():
             return
         else:
-            filename = QtWidgets.QFileDialog.getSaveFileName(self, "Save DICOM", "../..", "*.dcm")[0]
+            filename = QtWidgets.QFileDialog.getSaveFileName(self, "Save DICOM", "../../..", "*.dcm")[0]
             if filename == '':
                 return
             else:
@@ -137,6 +148,9 @@ class DicomSaveDialog(QtWidgets.QDialog):
 
 
 class DicomShowDialog(QtWidgets.QDialog):
+    """
+    Class for show DICOM file structure.
+    """
     def __init__(self):
         super().__init__(None)
         self.setWindowTitle('Load DICOM file')
@@ -190,7 +204,11 @@ class DicomShowDialog(QtWidgets.QDialog):
             super().exec_()
 
     def load(self) -> bool:
-        filename = QtWidgets.QFileDialog.getOpenFileName(self, "Open DICOM", "../..", "DICOM File (*.dcm)")[0]
+        """
+        Load DICOM file and insert file data into widgets.
+        :return: bool
+        """
+        filename = QtWidgets.QFileDialog.getOpenFileName(self, "Open DICOM", "../../..", "DICOM File (*.dcm)")[0]
         if filename == '':
             self.close()
             return False

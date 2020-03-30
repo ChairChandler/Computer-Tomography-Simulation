@@ -1,18 +1,21 @@
 import numpy as np
 from typing import Tuple
-from ct import CT
+from ..CT import CT
 
 
 class InteractiveCT(CT):
-    def __init__(self, img: np.ndarray, rotate_angle: int, start_angle: int, detectors_number: int, farthest_detectors_distance: int, use_filter: bool = False):
+    """
+    Simulates computer tomography via image reconstruction in interactive mode.
+    """
+    def __init__(self, img: np.ndarray, rotate_angle: int, start_angle: int, detectors_number: int, farthest_detectors_distance: int):
         """
-            img: Image to simulate radon transform
-            rotate_angle: Emiters and detectors_pos angle for next iteration in degrees
-            start_angle: Initial degree in degrees
-            detectors_amount: Amount of detectors_pos
-            farthest_detectors_distance: Distance in pixels between farthest detectors_pos
+        :param img: image to simulate radon transform
+        :param rotate_angle: emiters and detectors_pos angle for next iteration in degrees
+        :param start_angle: initial degree in degrees
+        :param detectors_number: amount of detectors_pos
+        :param farthest_detectors_distance: distance in pixels between farthest detectors_pos
         """
-        super().__init__(img, rotate_angle, start_angle, detectors_number, farthest_detectors_distance, use_filter)
+        super().__init__(img, rotate_angle, start_angle, detectors_number, farthest_detectors_distance)
 
         self.iter = 0
         self.stopIter = 180 // rotate_angle
