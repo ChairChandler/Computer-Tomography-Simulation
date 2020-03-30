@@ -1,1 +1,0 @@
-from .mainWindow import MainWindow
