@@ -1,7 +1,11 @@
+import sys
+
+sys.path.append("..")
+
 import numpy as np
 from datetime import datetime
 from typing import Dict
-from src.conversion import Conversion
+from conversion import Conversion
 from PySide2.QtCore import Qt
 import PySide2.QtWidgets as QtWidgets
 import pydicom as pd
@@ -12,6 +16,7 @@ class DicomSaveDialog(QtWidgets.QDialog):
     """
     Class for save patient informations to DICOM file.
     """
+
     def __init__(self, img: np.ndarray, date_time: datetime):
         """
         :param img: image to save
@@ -151,6 +156,7 @@ class DicomShowDialog(QtWidgets.QDialog):
     """
     Class for show DICOM file structure.
     """
+
     def __init__(self):
         super().__init__(None)
         self.setWindowTitle('Load DICOM file')

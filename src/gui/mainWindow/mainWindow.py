@@ -1,6 +1,10 @@
+import sys
+
+sys.path.append("...")
+
 import numpy as np
 from typing import Any, List, Union, Tuple, Callable
-from src.ct import CT, InteractiveCT
+from ct import CT, InteractiveCT
 from PySide2.QtGui import QPixmap
 from PySide2.QtCore import SIGNAL, QObject, Qt
 import PySide2.QtWidgets as QtWidgets
@@ -8,7 +12,7 @@ from threading import Thread
 from skimage import io
 from math import sqrt
 from os import path
-from ...conversion import Conversion
+from conversion import Conversion
 from datetime import datetime
 from ..dicomWindow import *
 
