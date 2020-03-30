@@ -11,3 +11,6 @@ Computer tomography simulation using radon transform.
 2. Run via python3 interpreter.
 
 ## How to use
+
+## Issues
+Non-fast mode preprocess images iteration frames from greyscale through rgb to the PySide2 QPixmap. It impacts on CT process time. 
