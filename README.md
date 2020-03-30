@@ -1,5 +1,5 @@
 # Computer Tomography Simulation 
-Computer tomography simulation using radon transform.
+[Computer tomography](https://en.wikipedia.org/wiki/CT_scan) simulation using [radon transform](https://en.wikipedia.org/wiki/Radon_transform).
 
 ## How to run
 1. Download needed packages:
