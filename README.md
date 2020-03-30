@@ -10,7 +10,7 @@ Computer tomography simulation using radon transform.
  
 2. Run via python3 interpreter.
 
-## Manual
+## GUI Interface
 ![1](https://user-images.githubusercontent.com/32361814/77952539-1f2a9280-72cc-11ea-8c82-b90463022f11.png)
 
 ## Issues
