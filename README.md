@@ -14,4 +14,4 @@ Computer tomography simulation using radon transform.
 ![1](https://user-images.githubusercontent.com/32361814/77952539-1f2a9280-72cc-11ea-8c82-b90463022f11.png)
 
 ## Issues
-Non-fast mode preprocess images iteration frames from greyscale through rgb to the PySide2 QPixmap. It impacts on CT process time. 
+Non-fast mode preprocess images iteration frames from greyscale through rgb to the PySide2 QPixmap. It impacts on CT process and extends time for ending.
